@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  grpc-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    networks:
+      - grpc-network
+    environment:
+      # Пример переменных окружения (если они нужны)
+      - ENV_VAR_NAME=example_value
+
+networks:
+  grpc-network:
+    driver: bridge
