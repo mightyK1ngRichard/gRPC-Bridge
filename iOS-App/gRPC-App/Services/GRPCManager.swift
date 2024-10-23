@@ -18,6 +18,12 @@ protocol GRPCManagerProtocol {
     func findMaximum(numbers: Int...)
     func computeAverage(numbers: Int...)
     func shutdown() throws
+    func connect(
+        userID: String,
+        userName: String,
+        complection: @escaping (ChatMessage) -> Void
+    )
+    func sendMessage(message: String, userID: String)
 }
 
 final class GRPCManager: GRPCManagerProtocol {
@@ -25,6 +31,7 @@ final class GRPCManager: GRPCManagerProtocol {
 
     private let group: EventLoopGroup
     private let client: Calc_CalcClientProtocol
+    private let chatClient: Chat_BroadcastClientProtocol
 
     private init(address: String = "127.0.0.1") {
         self.group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
@@ -35,6 +42,7 @@ final class GRPCManager: GRPCManagerProtocol {
             )
         )
         client = Calc_CalcNIOClient(channel: channel)
+        chatClient = Chat_BroadcastNIOClient(channel: channel)
     }
 
     func addTwoNumbers(num: Int, num2: Int) {
@@ -126,6 +134,54 @@ final class GRPCManager: GRPCManagerProtocol {
 
     func shutdown() throws {
         try group.syncShutdownGracefully()
+    }
+
+    func connect(
+        userID: String,
+        userName: String,
+        complection: @escaping (ChatMessage) -> Void
+    ) {
+        var request = Chat_Connect()
+        var user = Chat_User()
+        user.id = userID
+        user.name = userName
+        request.user = user
+
+        let call = chatClient.createStream(request, callOptions: nil) { message in
+            let message = ChatMessage(
+                id: UUID(),
+                owner: message.id,
+                message: message.content,
+                time: message.timestamp.date
+            )
+            complection(message)
+        }
+
+        call.status.whenComplete { result in
+            switch result {
+            case let .success(status):
+                print("[DEBUG]: success: \(status.code)")
+            case let .failure(error):
+                print("[DEBUG]: error: \(error)")
+            }
+        }
+    }
+
+    func sendMessage(message: String, userID: String) {
+        var request = Chat_Message()
+        request.content = message
+        request.id = userID
+        request.timestamp = Google_Protobuf_Timestamp()
+        let call = chatClient.broadcastMessage(request, callOptions: nil)
+
+        call.response.whenComplete { result in
+            switch result {
+            case let .success(status):
+                print("[DEBUG]: success: \(status)")
+            case let .failure(error):
+                print("[DEBUG]: error: \(error)")
+            }
+        }
     }
 }
 
