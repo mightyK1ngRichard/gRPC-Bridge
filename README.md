@@ -1,19 +1,29 @@
 # Swift+Go+gRPC
 
-## Команды:
+## gRPC Сервис:
 
-Устновить зависимости для swift
+Генерация прото файла для калькулятора
 ```bash
-brew install swift-protobuf
-brew install grpc-swift
+protoc -I proto proto/calc.proto --go_out=./internal/pkg/calc/generated/ \
+ --go_opt=paths=source_relative --go-grpc_out=./internal/pkg/calc/generated/ \
+ --go-grpc_opt=paths=source_relative
 ```
 
-Кодген:
+Генерация прото файла для чата
 ```bash
-# Для Swift
-protoc --swift_out=. calc.proto
-protoc --grpc-swift_out=. calc.proto
+protoc -I proto proto/chat.proto --go_out=./internal/pkg/chat/generated/ \
+ --go_opt=paths=source_relative --go-grpc_out=./internal/pkg/chat/generated/ \
+ --go-grpc_opt=paths=source_relative
+```
 
-# Для GoLang
-protoc -I proto proto/echo.proto --go_out=./gen/go/ --go_opt=paths=source_relative --go-grpc_out=./gen/go/ --go-grpc_opt=paths=source_relative
+## Клиент:
+
+```bash
+# Для чата
+protoc --swift_out=. chat.proto 
+protoc --grpc-swift_out=. chat.proto
+
+# Для калькултятора
+protoc --swift_out=. calc.proto 
+protoc --grpc-swift_out=. calc.proto
 ```
