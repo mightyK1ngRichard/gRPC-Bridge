@@ -1,0 +1,22 @@
+// Команда для кодгена
+// protoc -I proto proto/echo.proto --go_out=./gen/go/ --go_opt=paths=source_relative --go-grpc_out=./gen/go/ --go-grpc_opt=paths=source_relative
+
+syntax = "proto3";
+
+package main;
+
+option go_package = "gRPC-Service/proto";
+
+service EchoService {
+  rpc BroadcastMessage (Message) returns (stream Message) {}
+}
+
+message Message {
+  string content = 1;
+}
+
+// brew install swift-protobuf
+// brew install grpc-swift
+
+// Для клиента
+// protoc echo.proto --swift_out=. --grpc-swift_out=.
