@@ -2,7 +2,7 @@
 
 ## Quick start
 
-Запуск gRPC сервиса:
+Запуск gRPC сервиса (Запускать в папке gRPC-Service):
 ```go
 make start
 ```
