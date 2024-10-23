@@ -11,10 +11,16 @@ import NIO
 import NIOConcurrencyHelpers
 import SwiftProtobuf
 
-/// Команды для кодгена:
-/// `protoc --swift_out=. calc.proto`
-/// `protoc --grpc-swift_out=. calc.proto`
-final class GRPCManager {
+protocol GRPCManagerProtocol {
+    func addTwoNumbers(num: Int, num2: Int)
+    func fibo(number: Int, completion: @escaping (Result<[Int64], Error>) -> Void)
+    func fibo(number: Int) async throws -> [Int64]
+    func findMaximum(numbers: Int...)
+    func computeAverage(numbers: Int...)
+    func shutdown() throws
+}
+
+final class GRPCManager: GRPCManagerProtocol {
     static let shared = GRPCManager()
 
     private let group: EventLoopGroup
@@ -39,9 +45,29 @@ final class GRPCManager {
         let unaryCall = client.add(request, callOptions: calloption)
         do {
             let response = try unaryCall.response.wait()
-            print("Sum Received received: \(response.sumResult)")
+            print("[DEBUG]: sum=\(response.sumResult)")
         } catch {
-            print("Sum Received failed: \(error)")
+            print("[DEBUG]: failed: \(error)")
+        }
+    }
+
+    func fibo(number: Int, completion: @escaping (Result<[Int64], Error>) -> Void) {
+        var request = Calc_FiboRequest()
+        request.num = Int64(number)
+
+        var resultNumbers: [Int64] = []
+        let call = client.fibo(request, callOptions: nil) { response in
+            print("[DEBUG]: get streaming data: \(response.num)")
+            resultNumbers.append(response.num)
+        }
+
+        call.status.whenSuccess { status in
+            print("[DEBUG]: status: \(status.code)")
+            completion(.success(resultNumbers))
+        }
+
+        call.status.whenFailure { error in
+            completion(.failure(error))
         }
     }
 
@@ -50,7 +76,6 @@ final class GRPCManager {
             print("[DEBUG]: currentMax=\(maxNumber)")
         }
 
-        // Отправляем числа на сервер
         for number in numbers {
             var request = Calc_FindMaximumRequest()
             request.number = Int32(number)
@@ -101,5 +126,23 @@ final class GRPCManager {
 
     func shutdown() throws {
         try group.syncShutdownGracefully()
+    }
+}
+
+// MARK: - Async Await
+
+extension GRPCManager {
+
+    func fibo(number: Int) async throws -> [Int64] {
+        try await withCheckedThrowingContinuation { continuation in
+            fibo(number: number) { result in
+                switch result {
+                case let.success(numbers):
+                    continuation.resume(returning: numbers)
+                case let .failure(error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 }
