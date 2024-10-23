@@ -1,5 +1,12 @@
 # Swift+Go+gRPC
 
+## Quick start
+
+Запуск gRPC сервиса:
+```go
+make start
+```
+
 ## gRPC Сервис:
 
 Генерация прото файла для калькулятора
